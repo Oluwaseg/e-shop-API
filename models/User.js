@@ -46,6 +46,16 @@ const schema = new mongoose.Schema({
   ],
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  otp: String,
+  otpExpire: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Generate username if not provided

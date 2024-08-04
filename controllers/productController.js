@@ -1,3 +1,4 @@
+import cloudinary from "cloudinary";
 import Product from "../models/Product.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
 import { catchAsync } from "../utils/catchAsync.js";
@@ -5,6 +6,13 @@ import APIFeatures from "../utils/apiFeatures.js";
 
 export const createProduct = catchAsync(async (req, res, next) => {
   try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No images uploaded",
+      });
+    }
+
     const images = req.files.map((file) => ({
       url: file.path,
       public_id: file.filename,
@@ -52,17 +60,56 @@ export const getProductById = catchAsync(async (req, res, next) => {
 });
 
 export const updateProduct = catchAsync(async (req, res, next) => {
-  const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-    useFindAndModify: false,
-  });
+  const remove_images = req.body.remove_images || [];
+
+  if (remove_images.length > 0) {
+    await Promise.all(
+      remove_images.map(async (imageUrl) => {
+        const public_id = imageUrl.split("/").pop().split(".")[0];
+        await cloudinary.v2.uploader.destroy(public_id);
+      })
+    );
+  }
+
+  let newImages = [];
+  if (req.files && req.files.length > 0) {
+    newImages = req.files.map((file) => ({
+      url: file.path,
+      public_id: file.filename,
+    }));
+  }
+
+  const product = await Product.findById(req.params.id);
   if (!product) {
     return next(new ErrorHandler("Product not found", 404));
   }
+
+  const filteredImages = product.images.filter(
+    (img) => !remove_images.includes(img.url)
+  );
+
+  const updatedImages = [...filteredImages, ...newImages];
+
+  const updatedProduct = await Product.findByIdAndUpdate(
+    req.params.id,
+    {
+      ...req.body,
+      images: updatedImages,
+    },
+    {
+      new: true,
+      runValidators: true,
+      useFindAndModify: false,
+    }
+  );
+
+  if (!updatedProduct) {
+    return next(new ErrorHandler("Product not found", 404));
+  }
+
   res.status(200).json({
     success: true,
-    product,
+    product: updatedProduct,
   });
 });
 

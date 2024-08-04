@@ -3,7 +3,7 @@ import User from "../models/User.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { sendToken } from "../utils/jwtToken.js";
-import { sendEmail } from "../utils/sendEmail.js";
+import { sendEmail, sendOTP, sendWelcomeEmail } from "../utils/sendEmail.js";
 
 export const register = catchAsync(async (req, res, next) => {
   const { name, email, password } = req.body;
@@ -28,7 +28,35 @@ export const register = catchAsync(async (req, res, next) => {
     avatar,
   });
 
-  sendToken(user, 201, res);
+  await sendOTP(user);
+
+  res.status(201).json({
+    success: true,
+    message:
+      "Registration successful! A verification email has been sent to your address with a one-time password (OTP). Please check your email and use the OTP to verify your account. The OTP will expire in 10 minutes.",
+  });
+});
+
+export const verifyOTP = catchAsync(async (req, res, next) => {
+  const { otp } = req.body;
+
+  const user = await User.findOne({
+    otp,
+    otpExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new ErrorHandler("Invalid or expired OTP", 400));
+  }
+
+  user.isVerified = true;
+  user.otp = undefined;
+  user.otpExpire = undefined;
+  await user.save();
+
+  await sendWelcomeEmail(user);
+
+  sendToken(user, 200, res);
 });
 
 export const loginUser = catchAsync(async (req, res, next) => {
@@ -41,7 +69,7 @@ export const loginUser = catchAsync(async (req, res, next) => {
   const user = await User.findOne({ email }).select("+password");
 
   if (!user) {
-    return next(new ErrorHandler("Invalid email or password", 401));
+    return next(new ErrorHandler("User not found", 404));
   }
 
   const isPasswordMatched = await user.comparePassword(password);

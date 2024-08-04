@@ -30,6 +30,7 @@ router.get("/products/:id", getProductById);
 router.put(
   "/products/:id",
   isAuthenticated,
+  uploadProductImage.array("images", 8),
   authorizeRoles("admin"),
   updateProduct
 );

@@ -12,6 +12,7 @@ import {
   getSingleUser,
   updateUserRole,
   deleteUser,
+  verifyOTP,
 } from "../controllers/userController.js";
 import {
   isAuthenticated,
@@ -21,6 +22,8 @@ import { uploadUserImage } from "../middlewares/image.config.js";
 const router = express.Router();
 
 router.post("/register", uploadUserImage.single("avatar"), register);
+
+router.post("/verify-otp", verifyOTP);
 
 router.post("/login", loginUser);
 

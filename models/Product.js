@@ -47,7 +47,7 @@ const productSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  Stock: {
+  stock: {
     type: Number,
     required: [true, "Count in stock is required"],
     default: 1,
@@ -62,13 +62,14 @@ const productSchema = new mongoose.Schema({
     },
   ],
   category: {
-    type: String,
-    required: [true, "Category is required"],
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Category",
+    required: true,
   },
-  // brand: {
-  //   type: String,
-  //   required: [true, "Brand is required"],
-  // },
+  brand: {
+    type: String,
+    // required: [true, "Brand is required"],
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
